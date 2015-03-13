@@ -22,10 +22,10 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.{UUID, Date}
 
-import com.jezhumble.javasysmon.JavaSysMon
+import com.jezhumble.javasysmon.{CpuTimes, JavaSysMon}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.{HashMap, HashSet}
+import scala.collection.mutable.{HashMap, HashSet,ListBuffer}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Random
@@ -132,13 +132,24 @@ private[spark] class Worker(
 
   var registrationRetryTimer: Option[Cancellable] = None
 
-  // Entropy Scheduler
-  val workerSysMonitor = new JavaSysMon()
+  /* Cellular Automaton Entropy (CAE) Guided Spark Worker allocation */
+  val caeWorkerSysMonitor = new JavaSysMon()
   // Total number of cores in the machine
-  val coresTotal = workerSysMonitor.numCpus()
+  val caeCoresTotal = caeWorkerSysMonitor.numCpus()
   // Speed per core in MHz
-  val speedPerCore = workerSysMonitor.cpuFrequencyInHz()/1000000/coresTotal
-
+  val caeSpeedPerCore = caeWorkerSysMonitor.cpuFrequencyInHz()/1000000/caeCoresTotal
+  // CPU Usage logging interval
+  val caeInterval = 1000
+  val caeHistoryMax = 60
+  val caeCpuUsageChangeHistory = new ListBuffer[Float]()
+  var caePreCpuTimes:CpuTimes =_
+  var caeTempCpuTimes:CpuTimes =_
+  var caePreCpuUsage:Float = 0
+  var caeTempCpuUsage:Float = 0
+  var caeSum:Float = 0
+  var caeAvg:Float = 0
+  var caeWorkerEntropy:Double=0
+  /* CAE End*/
 
   def coresFree: Int = cores - coresUsed
   def memoryFree: Int = memory - memoryUsed
@@ -164,7 +175,7 @@ private[spark] class Worker(
   override def preStart() {
     assert(!registered)
     logInfo("Starting Spark worker %s:%d with %d cores (%d MHzs), %s RAM".format(
-      host, port, cores,speedPerCore*cores,Utils.megabytesToString(memory)))
+      host, port, cores,caeSpeedPerCore*cores,Utils.megabytesToString(memory)))
     logInfo("Spark home: " + sparkHome)
     createWorkDir()
     context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
@@ -283,11 +294,34 @@ private[spark] class Worker(
       registered = true
       changeMaster(masterUrl, masterWebUiUrl)
       context.system.scheduler.schedule(0 millis, HEARTBEAT_MILLIS millis, self, SendHeartbeat)
+
+      // CAE Start
+      caePreCpuTimes=caeWorkerSysMonitor.cpuTimes()
+      context.system.scheduler.schedule(caeInterval millis, caeInterval millis,self,UpdateCaeCpuUsageChangeHistory)
+      // CAE End
       if (CLEANUP_ENABLED) {
         logInfo(s"Worker cleanup enabled; old application directories will be deleted in: $workDir")
         context.system.scheduler.schedule(CLEANUP_INTERVAL_MILLIS millis,
           CLEANUP_INTERVAL_MILLIS millis, self, WorkDirCleanup)
       }
+
+      // CAE Start
+    case UpdateCaeCpuUsageChangeHistory =>
+      while (caeCpuUsageChangeHistory.size>caeHistoryMax){
+        caeSum-=caeCpuUsageChangeHistory(0)
+        caeCpuUsageChangeHistory.remove(0)
+      }
+      caeTempCpuTimes=caeWorkerSysMonitor.cpuTimes()
+      caeTempCpuUsage=caeTempCpuTimes.getCpuUsage(caePreCpuTimes)
+      caeCpuUsageChangeHistory+=math.abs(caeTempCpuUsage-caePreCpuUsage)
+      caeSum+=math.abs(caeTempCpuUsage-caePreCpuUsage)
+
+      caePreCpuTimes=caeTempCpuTimes
+      caePreCpuUsage=caePreCpuUsage
+
+      logInfo(caeCpuUsageChangeHistory.toArray.mkString(","))
+      logInfo("Average CPU Change"+caeSum/caeCpuUsageChangeHistory.size.toFloat)
+      // CAE End
 
     case SendHeartbeat =>
       if (connected) { master ! Heartbeat(workerId) }

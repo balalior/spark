@@ -92,6 +92,8 @@ private[deploy] object DeployMessages {
 
   // Worker internal
 
+  case object UpdateCaeCpuUsageChangeHistory
+
   case object WorkDirCleanup      // Sent to Worker actor periodically for cleaning up app folders
 
   case object ReregisterWithMaster // used when a worker attempts to reconnect to a master
