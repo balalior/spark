@@ -22,6 +22,8 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.{UUID, Date}
 
+import com.jezhumble.javasysmon.JavaSysMon
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{HashMap, HashSet}
 import scala.concurrent.duration._
@@ -130,6 +132,14 @@ private[spark] class Worker(
 
   var registrationRetryTimer: Option[Cancellable] = None
 
+  // Entropy Scheduler
+  val workerSysMonitor = new JavaSysMon()
+  // Total number of cores in the machine
+  val coresTotal = workerSysMonitor.numCpus()
+  // Speed per core in MHz
+  val speedPerCore = workerSysMonitor.cpuFrequencyInHz()/1000000/coresTotal
+
+
   def coresFree: Int = cores - coresUsed
   def memoryFree: Int = memory - memoryUsed
 
@@ -153,8 +163,8 @@ private[spark] class Worker(
 
   override def preStart() {
     assert(!registered)
-    logInfo("Starting Spark worker %s:%d with %d cores, %s RAM".format(
-      host, port, cores, Utils.megabytesToString(memory)))
+    logInfo("Starting Spark worker %s:%d with %d cores (%d MHzs), %s RAM".format(
+      host, port, cores,speedPerCore*cores,Utils.megabytesToString(memory)))
     logInfo("Spark home: " + sparkHome)
     createWorkDir()
     context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
