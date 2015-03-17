@@ -36,7 +36,9 @@ private[spark] object JsonProtocol {
    ("memoryused" -> obj.memoryUsed) ~
    ("memoryfree" -> obj.memoryFree) ~
    ("state" -> obj.state.toString) ~
-   ("lastheartbeat" -> obj.lastHeartbeat)
+   ("lastheartbeat" -> obj.lastHeartbeat) ~
+     ("caeSpeed"->obj.caeLiveSpeed) ~
+     ("caeEntropy"->obj.caeLiveEntropy)
  }
 
   def writeApplicationInfo(obj: ApplicationInfo) = {

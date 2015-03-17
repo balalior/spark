@@ -145,7 +145,7 @@ private[spark] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
         <a href={worker.webUiAddress}>{worker.id}</a>
       </td>
       <td>{worker.host}:{worker.port}</td>
-      <td>{worker.state}</td>
+      <td>{worker.state} ({worker.caeSpeed} {worker.caeEntropy})</td>
       <td>{worker.cores} ({worker.coresUsed} Used)</td>
       <td sorttable_customkey={"%s.%s".format(worker.memory, worker.memoryUsed)}>
         {Utils.megabytesToString(worker.memory)}

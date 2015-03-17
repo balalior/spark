@@ -137,7 +137,7 @@ private[spark] class Worker(
   // Total number of cores in the machine
   val caeCoresTotal = caeWorkerSysMonitor.numCpus()
   // Speed per core in MHz
-  val caeSpeedPerCore = caeWorkerSysMonitor.cpuFrequencyInHz()/1000000/caeCoresTotal
+  val caeSpeedPerCore: Long = caeWorkerSysMonitor.cpuFrequencyInHz()/1000000/caeCoresTotal
   // CPU Usage logging interval
   val caeInterval = 1000
   val caeHistoryMax = 60
@@ -148,7 +148,13 @@ private[spark] class Worker(
   var caeTempCpuUsage:Float = 0
   var caeSum:Float = 0
   var caeAvg:Float = 0
-  var caeWorkerEntropy:Double=0
+  var caeEntropy:Double=0
+
+  var caeCount0:Double =0d
+  var caeCount1:Double =0d
+  var caeState=0
+  var caeP0:Double=0d
+  var caeP1:Double=0d
   /* CAE End*/
 
   def coresFree: Int = cores - coresUsed
@@ -210,7 +216,7 @@ private[spark] class Worker(
     for (masterUrl <- masterUrls) {
       logInfo("Connecting to master " + masterUrl + "...")
       val actor = context.actorSelection(Master.toAkkaUrl(masterUrl))
-      actor ! RegisterWorker(workerId, host, port, cores, memory, webUi.boundPort, publicAddress)
+      actor ! RegisterWorker(workerId, host, port, cores, memory, webUi.boundPort, publicAddress,caeSpeedPerCore*cores,0)
     }
   }
 
@@ -249,7 +255,7 @@ private[spark] class Worker(
          */
         if (master != null) {
           master ! RegisterWorker(
-            workerId, host, port, cores, memory, webUi.boundPort, publicAddress)
+            workerId, host, port, cores, memory, webUi.boundPort, publicAddress,caeSpeedPerCore*cores,0)
         } else {
           // We are retrying the initial registration
           tryRegisterAllMasters()
@@ -319,12 +325,33 @@ private[spark] class Worker(
       caePreCpuTimes=caeTempCpuTimes
       caePreCpuUsage=caePreCpuUsage
 
-      logInfo(caeCpuUsageChangeHistory.toArray.mkString(","))
-      logInfo("Average CPU Change"+caeSum/caeCpuUsageChangeHistory.size.toFloat)
+      //logInfo(caeCpuUsageChangeHistory.toArray.mkString(","))
+      //logInfo("Average CPU Change"+caeSum/caeCpuUsageChangeHistory.size.toFloat)
       // CAE End
 
     case SendHeartbeat =>
-      if (connected) { master ! Heartbeat(workerId) }
+      if (connected) {
+        caeCount0=0d
+        caeCount1=0d
+        caeAvg=caeSum/caeCpuUsageChangeHistory.size
+        val cellular = caeCpuUsageChangeHistory.map(
+          s=>{
+            if (s>caeAvg){
+              caeCount1+=1
+              caeState=1
+            } else {
+              caeCount0+=1
+              caeState=0
+            }
+            caeState
+          }
+        )
+        caeP0=caeCount0/caeCpuUsageChangeHistory.size.toDouble
+        caeP1=caeCount1/caeCpuUsageChangeHistory.size.toDouble
+        caeEntropy = -(caeP0*math.log(caeP0)+caeP1*math.log(caeP1))
+        logInfo("P0:"+caeP0+",P1:"+caeP1+",Entropy:"+caeEntropy.toString)
+        master ! Heartbeat(workerId,caeSpeedPerCore,caeEntropy)
+      }
 
     case WorkDirCleanup =>
       // Spin up a separate thread (in a future) to do the dir cleanup; don't tie up worker actor
