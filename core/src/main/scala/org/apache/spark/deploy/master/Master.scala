@@ -21,29 +21,27 @@ import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import scala.language.postfixOps
-import scala.util.Random
-
 import akka.actor._
 import akka.pattern.ask
 import akka.remote.{DisassociatedEvent, RemotingLifecycleEvent}
 import akka.serialization.SerializationExtension
-
-import org.apache.spark.{Logging, SecurityManager, SparkConf, SparkException}
-import org.apache.spark.deploy.{ApplicationDescription, DriverDescription,
-  ExecutorState, SparkHadoopUtil}
 import org.apache.spark.deploy.DeployMessages._
 import org.apache.spark.deploy.history.HistoryServer
 import org.apache.spark.deploy.master.DriverState.DriverState
 import org.apache.spark.deploy.master.MasterMessages._
 import org.apache.spark.deploy.master.ui.MasterWebUI
+import org.apache.spark.deploy.{ApplicationDescription, DriverDescription, ExecutorState, SparkHadoopUtil}
 import org.apache.spark.metrics.MetricsSystem
 import org.apache.spark.scheduler.{EventLoggingListener, ReplayListenerBus}
 import org.apache.spark.ui.SparkUI
 import org.apache.spark.util.{ActorLogReceive, AkkaUtils, SignalLogger, Utils}
+import org.apache.spark.{Logging, SecurityManager, SparkConf, SparkException}
+
+import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.util.Random
 
 private[spark] class Master(
     host: String,
@@ -195,7 +193,7 @@ private[spark] class Master(
       System.exit(0)
     }
 
-    case RegisterWorker(id, workerHost, workerPort, cores, memory, workerUiPort, publicAddress) =>
+    case RegisterWorker(id, workerHost, workerPort, cores, memory, workerUiPort, publicAddress,caeSpeed,caeEntropy) =>
     {
       logInfo("Registering worker %s:%d with %d cores, %s RAM".format(
         workerHost, workerPort, cores, Utils.megabytesToString(memory)))
@@ -205,7 +203,7 @@ private[spark] class Master(
         sender ! RegisterWorkerFailed("Duplicate worker ID")
       } else {
         val worker = new WorkerInfo(id, workerHost, workerPort, cores, memory,
-          sender, workerUiPort, publicAddress)
+          sender, workerUiPort, publicAddress,caeSpeed,caeEntropy)
         if (registerWorker(worker)) {
           persistenceEngine.addWorker(worker)
           sender ! RegisteredWorker(masterUrl, masterWebUiUrl)
@@ -340,10 +338,14 @@ private[spark] class Master(
       }
     }
 
-    case Heartbeat(workerId) => {
+    case Heartbeat(workerId,caeSpeed,caeEntropy) => {
       idToWorker.get(workerId) match {
         case Some(workerInfo) =>
           workerInfo.lastHeartbeat = System.currentTimeMillis()
+          workerInfo.caeLiveSpeed=caeSpeed*workerInfo.coresFree
+          workerInfo.caeLiveEntropy=caeEntropy
+
+          logInfo("Worker "+workerInfo.host+ " CPU speed - "+workerInfo.caeLiveSpeed+", Cpu entropy - "+workerInfo.caeLiveEntropy + "; Average Worker Entropy :" +workers.map(s=>s.caeEntropy).sum/workers.size)
         case None =>
           if (workers.map(_.id).contains(workerId)) {
             logWarning(s"Got heartbeat from unregistered worker $workerId." +

@@ -34,36 +34,38 @@ private[deploy] object DeployMessages {
   // Worker to Master
 
   case class RegisterWorker(
-      id: String,
-      host: String,
-      port: Int,
-      cores: Int,
-      memory: Int,
-      webUiPort: Int,
-      publicAddress: String)
+                             id: String,
+                             host: String,
+                             port: Int,
+                             cores: Int,
+                             memory: Int,
+                             webUiPort: Int,
+                             publicAddress: String,
+                             caeSpeed:Long,
+                             caeEntropy:Double)
     extends DeployMessage {
     Utils.checkHost(host, "Required hostname")
     assert (port > 0)
   }
 
   case class ExecutorStateChanged(
-      appId: String,
-      execId: Int,
-      state: ExecutorState,
-      message: Option[String],
-      exitStatus: Option[Int])
+                                   appId: String,
+                                   execId: Int,
+                                   state: ExecutorState,
+                                   message: Option[String],
+                                   exitStatus: Option[Int])
     extends DeployMessage
 
   case class DriverStateChanged(
-      driverId: String,
-      state: DriverState,
-      exception: Option[Exception])
+                                 driverId: String,
+                                 state: DriverState,
+                                 exception: Option[Exception])
     extends DeployMessage
 
   case class WorkerSchedulerStateResponse(id: String, executors: List[ExecutorDescription],
-     driverIds: Seq[String])
+                                          driverIds: Seq[String])
 
-  case class Heartbeat(workerId: String) extends DeployMessage
+  case class Heartbeat(workerId: String,caeSpeed:Long,caeEntropy:Double) extends DeployMessage
 
   // Master to Worker
 
@@ -76,12 +78,12 @@ private[deploy] object DeployMessages {
   case class KillExecutor(masterUrl: String, appId: String, execId: Int) extends DeployMessage
 
   case class LaunchExecutor(
-      masterUrl: String,
-      appId: String,
-      execId: Int,
-      appDesc: ApplicationDescription,
-      cores: Int,
-      memory: Int)
+                             masterUrl: String,
+                             appId: String,
+                             execId: Int,
+                             appDesc: ApplicationDescription,
+                             cores: Int,
+                             memory: Int)
     extends DeployMessage
 
   case class LaunchDriver(driverId: String, driverDesc: DriverDescription) extends DeployMessage
@@ -115,7 +117,7 @@ private[deploy] object DeployMessages {
   }
 
   case class ExecutorUpdated(id: Int, state: ExecutorState, message: Option[String],
-    exitStatus: Option[Int])
+                             exitStatus: Option[Int])
 
   case class ApplicationRemoved(message: String)
 
@@ -134,7 +136,7 @@ private[deploy] object DeployMessages {
   case class RequestDriverStatus(driverId: String) extends DeployMessage
 
   case class DriverStatusResponse(found: Boolean, state: Option[DriverState],
-    workerId: Option[String], workerHostPort: Option[String], exception: Option[Exception])
+                                  workerId: Option[String], workerHostPort: Option[String], exception: Option[Exception])
 
   // Internal message in AppClient
 
@@ -151,9 +153,9 @@ private[deploy] object DeployMessages {
   // Master to MasterWebUI
 
   case class MasterStateResponse(host: String, port: Int, workers: Array[WorkerInfo],
-    activeApps: Array[ApplicationInfo], completedApps: Array[ApplicationInfo],
-    activeDrivers: Array[DriverInfo], completedDrivers: Array[DriverInfo],
-    status: MasterState) {
+                                 activeApps: Array[ApplicationInfo], completedApps: Array[ApplicationInfo],
+                                 activeDrivers: Array[DriverInfo], completedDrivers: Array[DriverInfo],
+                                 status: MasterState) {
 
     Utils.checkHost(host, "Required hostname")
     assert (port > 0)
@@ -168,9 +170,9 @@ private[deploy] object DeployMessages {
   // Worker to WorkerWebUI
 
   case class WorkerStateResponse(host: String, port: Int, workerId: String,
-    executors: List[ExecutorRunner], finishedExecutors: List[ExecutorRunner],
-    drivers: List[DriverRunner], finishedDrivers: List[DriverRunner], masterUrl: String,
-    cores: Int, memory: Int, coresUsed: Int, memoryUsed: Int, masterWebUiUrl: String) {
+                                 executors: List[ExecutorRunner], finishedExecutors: List[ExecutorRunner],
+                                 drivers: List[DriverRunner], finishedDrivers: List[DriverRunner], masterUrl: String,
+                                 cores: Int, memory: Int, coresUsed: Int, memoryUsed: Int, masterWebUiUrl: String) {
 
     Utils.checkHost(host, "Required hostname")
     assert (port > 0)

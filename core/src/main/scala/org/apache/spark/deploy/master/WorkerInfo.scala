@@ -24,14 +24,16 @@ import akka.actor.ActorRef
 import org.apache.spark.util.Utils
 
 private[spark] class WorkerInfo(
-    val id: String,
-    val host: String,
-    val port: Int,
-    val cores: Int,
-    val memory: Int,
-    val actor: ActorRef,
-    val webUiPort: Int,
-    val publicAddress: String)
+                                 val id: String,
+                                 val host: String,
+                                 val port: Int,
+                                 val cores: Int,
+                                 val memory: Int,
+                                 val actor: ActorRef,
+                                 val webUiPort: Int,
+                                 val publicAddress: String,
+                                 val caeSpeed:Long=0,
+                                 val caeEntropy:Double=0)
   extends Serializable {
 
   Utils.checkHost(host, "Expected hostname")
@@ -43,6 +45,8 @@ private[spark] class WorkerInfo(
   @transient var coresUsed: Int = _
   @transient var memoryUsed: Int = _
 
+  @transient var caeLiveSpeed:Long =_
+  @transient var caeLiveEntropy:Double = _
   @transient var lastHeartbeat: Long = _
 
   init()
@@ -62,6 +66,8 @@ private[spark] class WorkerInfo(
     coresUsed = 0
     memoryUsed = 0
     lastHeartbeat = System.currentTimeMillis()
+    caeLiveSpeed=caeSpeed
+    caeLiveEntropy=caeEntropy
   }
 
   def hostPort: String = {
