@@ -345,7 +345,7 @@ private[spark] class Master(
           workerInfo.caeLiveSpeed=caeSpeed*workerInfo.coresFree
           workerInfo.caeLiveEntropy=caeEntropy
 
-          logInfo("Worker "+workerInfo.host+ " CPU speed - "+workerInfo.caeLiveSpeed+", Cpu entropy - "+workerInfo.caeLiveEntropy + "; Average Worker Entropy :" +workers.map(s=>s.caeEntropy).sum/workers.size)
+          logInfo("Worker "+workerInfo.host+ " CPU speed - "+workerInfo.caeLiveSpeed+", Cpu entropy - "+workerInfo.caeLiveEntropy + "; Average Worker Entropy :" +workers.map(s=>s.caeEntropy).sum.toString)
         case None =>
           if (workers.map(_.id).contains(workerId)) {
             logWarning(s"Got heartbeat from unregistered worker $workerId." +
