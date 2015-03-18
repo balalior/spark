@@ -65,7 +65,7 @@ private[deploy] object DeployMessages {
   case class WorkerSchedulerStateResponse(id: String, executors: List[ExecutorDescription],
                                           driverIds: Seq[String])
 
-  case class Heartbeat(workerId: String,caeSpeed:Long,caeEntropy:Double) extends DeployMessage
+  case class Heartbeat(workerId: String,caeSpeed:Long=0,caeEntropy:Double=0) extends DeployMessage
 
   // Master to Worker
 

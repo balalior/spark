@@ -303,7 +303,7 @@ private[spark] class Worker(
 
       // CAE Start
       caePreCpuTimes=caeWorkerSysMonitor.cpuTimes()
-      context.system.scheduler.schedule(caeInterval millis, caeInterval millis,self,UpdateCaeCpuUsageChangeHistory)
+      context.system.scheduler.schedule(0 millis, caeInterval millis,self,UpdateCaeCpuUsageChangeHistory)
       // CAE End
       if (CLEANUP_ENABLED) {
         logInfo(s"Worker cleanup enabled; old application directories will be deleted in: $workDir")
@@ -333,6 +333,9 @@ private[spark] class Worker(
       if (connected) {
         caeCount0=0d
         caeCount1=0d
+        caeP0=0
+        caeP1=0
+        caeEntropy=0
         caeAvg=caeSum/caeCpuUsageChangeHistory.size
         val cellular = caeCpuUsageChangeHistory.map(
           s=>{
@@ -346,9 +349,11 @@ private[spark] class Worker(
             caeState
           }
         )
-        caeP0=caeCount0/caeCpuUsageChangeHistory.size.toDouble
-        caeP1=caeCount1/caeCpuUsageChangeHistory.size.toDouble
-        caeEntropy = -(caeP0*math.log(caeP0)+caeP1*math.log(caeP1))
+        if (caeCpuUsageChangeHistory.size>0) {
+          caeP0 = caeCount0 / caeCpuUsageChangeHistory.size.toDouble
+          caeP1 = caeCount1 / caeCpuUsageChangeHistory.size.toDouble
+          caeEntropy = -(caeP0 * math.log(caeP0) + caeP1 * math.log(caeP1))
+        }
         logInfo("P0:"+caeP0+",P1:"+caeP1+",Entropy:"+caeEntropy.toString)
         master ! Heartbeat(workerId,caeSpeedPerCore,caeEntropy)
       }

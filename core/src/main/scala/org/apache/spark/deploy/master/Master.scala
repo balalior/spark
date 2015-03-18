@@ -65,6 +65,7 @@ private[spark] class Master(
   val workers = new HashSet[WorkerInfo]
   val idToWorker = new HashMap[String, WorkerInfo]
   val addressToWorker = new HashMap[Address, WorkerInfo]
+  var caeAvgResourceEntropy:Double =0
 
   val apps = new HashSet[ApplicationInfo]
   val idToApp = new HashMap[String, ApplicationInfo]
@@ -343,9 +344,11 @@ private[spark] class Master(
         case Some(workerInfo) =>
           workerInfo.lastHeartbeat = System.currentTimeMillis()
           workerInfo.caeLiveSpeed=caeSpeed*workerInfo.coresFree
-          workerInfo.caeLiveEntropy=caeEntropy
-
-          logInfo("Worker "+workerInfo.host+ " CPU speed - "+workerInfo.caeLiveSpeed+", Cpu entropy - "+workerInfo.caeLiveEntropy + "; Average Worker Entropy :" +workers.map(s=>s.caeEntropy).sum/workers.size)
+          if (caeEntropy>0) {
+            workerInfo.caeLiveEntropy = caeEntropy
+            caeAvgResourceEntropy = workers.map(s => s.caeLiveEntropy).toSeq.sum / workers.size.toDouble
+          }
+          logInfo("Worker '"+workerInfo.host+ "' CPU speed - "+workerInfo.caeLiveSpeed+", Worker Entropy - "+workerInfo.caeLiveEntropy + "; Average Worker Entropy :" + caeAvgResourceEntropy)
         case None =>
           if (workers.map(_.id).contains(workerId)) {
             logWarning(s"Got heartbeat from unregistered worker $workerId." +

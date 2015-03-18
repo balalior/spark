@@ -45,9 +45,9 @@ private[spark] class WorkerInfo(
   @transient var coresUsed: Int = _
   @transient var memoryUsed: Int = _
 
-  @transient var caeLiveSpeed:Long =_
-  @transient var caeLiveEntropy:Double = _
-  @transient var lastHeartbeat: Long = _
+  @transient var caeLiveSpeed:Long =0
+  @transient var caeLiveEntropy:Double = 0
+  @transient var lastHeartbeat: Long = 0
 
   init()
 

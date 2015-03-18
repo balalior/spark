@@ -58,6 +58,8 @@ private[spark] class Executor(
 
   private val EMPTY_BYTE_BUFFER = ByteBuffer.wrap(new Array[Byte](0))
 
+  var caeSpeedPerCore=0d
+
   @volatile private var isStopped = false
 
   // No ip or host:port - just hostname
