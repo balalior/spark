@@ -33,5 +33,8 @@ private[cluster] class ExecutorData(
    val executorAddress: Address,
    val executorHost: String ,
    var freeCores: Int,
-   val totalCores: Int
+   val totalCores: Int,
+  var caeWorkerSpeedPerCore:Long=0,
+  var caeWorkerEntropy:Double=0,
+  var caeAvgResourceEntropy:Double=0
 )

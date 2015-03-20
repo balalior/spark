@@ -19,36 +19,38 @@ package org.apache.spark.deploy.worker
 
 import java.io._
 
-import scala.collection.JavaConversions._
-
 import akka.actor.ActorRef
 import com.google.common.base.Charsets.UTF_8
 import com.google.common.io.Files
-
-import org.apache.spark.{SparkConf, Logging}
-import org.apache.spark.deploy.{ApplicationDescription, Command, ExecutorState}
 import org.apache.spark.deploy.DeployMessages.ExecutorStateChanged
+import org.apache.spark.deploy.{ApplicationDescription, ExecutorState}
 import org.apache.spark.util.logging.FileAppender
+import org.apache.spark.{Logging, SparkConf}
+
+import scala.collection.JavaConversions._
 
 /**
  * Manages the execution of one executor process.
  * This is currently only used in standalone mode.
  */
 private[spark] class ExecutorRunner(
-    val appId: String,
-    val execId: Int,
-    val appDesc: ApplicationDescription,
-    val cores: Int,
-    val memory: Int,
-    val worker: ActorRef,
-    val workerId: String,
-    val host: String,
-    val sparkHome: File,
-    val executorDir: File,
-    val workerUrl: String,
-    val conf: SparkConf,
-    val appLocalDirs: Seq[String],
-    var state: ExecutorState.Value)
+                                     val appId: String,
+                                     val execId: Int,
+                                     val appDesc: ApplicationDescription,
+                                     val cores: Int,
+                                     val memory: Int,
+                                     val worker: ActorRef,
+                                     val workerId: String,
+                                     val host: String,
+                                     val sparkHome: File,
+                                     val executorDir: File,
+                                     val workerUrl: String,
+                                     val conf: SparkConf,
+                                     val appLocalDirs: Seq[String],
+                                     var state: ExecutorState.Value,
+                                     var caeWorkerSpeedPerCore:Long,
+                                     var caeWorkerEntropy:Double,
+                                     var caeAvgResourceEntropy:Double)
   extends Logging {
 
   val fullId = appId + "/" + execId

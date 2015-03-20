@@ -17,11 +17,14 @@
 
 package org.apache.spark.scheduler.cluster
 
+import org.apache.spark.deploy.master.WorkerInfo
 import org.apache.spark.{Logging, SparkConf, SparkContext, SparkEnv}
 import org.apache.spark.deploy.{ApplicationDescription, Command}
 import org.apache.spark.deploy.client.{AppClient, AppClientListener}
 import org.apache.spark.scheduler.{ExecutorExited, ExecutorLossReason, SlaveLost, TaskSchedulerImpl}
 import org.apache.spark.util.Utils
+
+import scala.collection.mutable
 
 private[spark] class SparkDeploySchedulerBackend(
     scheduler: TaskSchedulerImpl,
@@ -85,6 +88,11 @@ private[spark] class SparkDeploySchedulerBackend(
     if (shutdownCallback != null) {
       shutdownCallback(this)
     }
+  }
+
+  override def updateCAEInfo(workers:mutable.HashSet[WorkerInfo],avgEntropy:Double): Unit = {
+    scheduler.workers=workers
+    scheduler.caeAvgResourceEntropy=avgEntropy
   }
 
   override def connected(appId: String) {

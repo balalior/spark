@@ -126,6 +126,9 @@ private[spark] class AppClient(
         changeMaster(masterUrl)
         listener.connected(appId)
 
+      case UpdateCAEInfo(workers,avgEntropy) =>
+        listener.updateCAEInfo(workers,avgEntropy)
+
       case ApplicationRemoved(message) =>
         markDead("Master removed our application: %s".format(message))
         context.stop(self)

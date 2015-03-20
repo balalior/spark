@@ -20,11 +20,14 @@ package org.apache.spark.deploy.master
 import org.apache.spark.deploy.{ExecutorDescription, ExecutorState}
 
 private[spark] class ExecutorInfo(
-    val id: Int,
-    val application: ApplicationInfo,
-    val worker: WorkerInfo,
-    val cores: Int,
-    val memory: Int) {
+                                   val id: Int,
+                                   val application: ApplicationInfo,
+                                   val worker: WorkerInfo,
+                                   val cores: Int,
+                                   val memory: Int,
+                                   val speed:Long,
+                                   val entropy:Double,
+                                   val avgEntropy:Double) {
 
   var state = ExecutorState.LAUNCHING
 
@@ -39,9 +42,12 @@ private[spark] class ExecutorInfo(
     other match {
       case info: ExecutorInfo =>
         fullId == info.fullId &&
-        worker.id == info.worker.id &&
-        cores == info.cores &&
-        memory == info.memory
+          worker.id == info.worker.id &&
+          cores == info.cores &&
+          memory == info.memory &&
+          speed == info.speed &&
+          entropy == info.entropy &&
+          avgEntropy == info.avgEntropy
       case _ => false
     }
   }

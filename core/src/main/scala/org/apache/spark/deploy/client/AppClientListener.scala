@@ -17,6 +17,10 @@
 
 package org.apache.spark.deploy.client
 
+import org.apache.spark.deploy.master.WorkerInfo
+
+import scala.collection.mutable
+
 /**
  * Callbacks invoked by deploy client when various events happen. There are currently four events:
  * connecting to the cluster, disconnecting, being given an executor, and having an executor
@@ -25,6 +29,8 @@ package org.apache.spark.deploy.client
  * Users of this API should *not* block inside the callback methods.
  */
 private[spark] trait AppClientListener {
+  def updateCAEInfo(workers:mutable.HashSet[WorkerInfo],avgEntropy:Double): Unit
+
   def connected(appId: String): Unit
 
   /** Disconnection may be a temporary state, as we fail over to a new Master. */

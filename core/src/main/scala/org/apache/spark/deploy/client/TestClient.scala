@@ -17,13 +17,21 @@
 
 package org.apache.spark.deploy.client
 
+import org.apache.spark.deploy.master.WorkerInfo
 import org.apache.spark.{SecurityManager, SparkConf, Logging}
 import org.apache.spark.deploy.{ApplicationDescription, Command}
 import org.apache.spark.util.{AkkaUtils, Utils}
 
+import scala.collection.mutable
+
 private[spark] object TestClient {
 
   class TestListener extends AppClientListener with Logging {
+
+    def updateCAEInfo(workers:mutable.HashSet[WorkerInfo],avgEntropy:Double) {
+
+    }
+
     def connected(id: String) {
       logInfo("Connected to master, got app ID " + id)
     }

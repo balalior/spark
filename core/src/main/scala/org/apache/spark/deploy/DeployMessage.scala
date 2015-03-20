@@ -26,6 +26,8 @@ import org.apache.spark.deploy.master.RecoveryState.MasterState
 import org.apache.spark.deploy.worker.{DriverRunner, ExecutorRunner}
 import org.apache.spark.util.Utils
 
+import scala.collection.mutable
+
 private[deploy] sealed trait DeployMessage extends Serializable
 
 /** Contains messages sent between Scheduler actor nodes. */
@@ -73,6 +75,8 @@ private[deploy] object DeployMessages {
 
   case class RegisterWorkerFailed(message: String) extends DeployMessage
 
+  case class UpdateCaeAverageResourceEntropy(caeAverageResourceEntropy: Double) extends DeployMessage
+
   case class ReconnectWorker(masterUrl: String) extends DeployMessage
 
   case class KillExecutor(masterUrl: String, appId: String, execId: Int) extends DeployMessage
@@ -108,6 +112,8 @@ private[deploy] object DeployMessages {
   case class MasterChangeAcknowledged(appId: String)
 
   // Master to AppClient
+
+  case class UpdateCAEInfo(workers:mutable.HashSet[WorkerInfo],avgEntropy:Double) extends DeployMessage
 
   case class RegisteredApplication(appId: String, masterUrl: String) extends DeployMessage
 

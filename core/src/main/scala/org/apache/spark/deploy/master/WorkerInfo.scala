@@ -33,7 +33,8 @@ private[spark] class WorkerInfo(
                                  val webUiPort: Int,
                                  val publicAddress: String,
                                  val caeSpeed:Long=0,
-                                 val caeEntropy:Double=0)
+                                 val caeEntropy:Double=0,
+                                 val caeAvgEntropy:Double=0)
   extends Serializable {
 
   Utils.checkHost(host, "Expected hostname")
@@ -47,6 +48,7 @@ private[spark] class WorkerInfo(
 
   @transient var caeLiveSpeed:Long =0
   @transient var caeLiveEntropy:Double = 0
+  @transient var caeAvgResourceEntropy:Double = 0
   @transient var lastHeartbeat: Long = 0
 
   init()
@@ -68,6 +70,7 @@ private[spark] class WorkerInfo(
     lastHeartbeat = System.currentTimeMillis()
     caeLiveSpeed=caeSpeed
     caeLiveEntropy=caeEntropy
+    caeAvgResourceEntropy=caeAvgEntropy
   }
 
   def hostPort: String = {

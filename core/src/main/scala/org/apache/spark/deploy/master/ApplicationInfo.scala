@@ -75,7 +75,7 @@ private[spark] class ApplicationInfo(
   }
 
   def addExecutor(worker: WorkerInfo, cores: Int, useID: Option[Int] = None): ExecutorInfo = {
-    val exec = new ExecutorInfo(newExecutorId(useID), this, worker, cores, desc.memoryPerSlave)
+    val exec = new ExecutorInfo(newExecutorId(useID), this, worker, cores, desc.memoryPerSlave,worker.caeLiveSpeed,worker.caeLiveEntropy,worker.caeAvgResourceEntropy)
     executors(exec.id) = exec
     coresGranted += cores
     exec

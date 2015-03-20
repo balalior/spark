@@ -18,22 +18,20 @@
 package org.apache.spark.scheduler
 
 import java.nio.ByteBuffer
-import java.util.{TimerTask, Timer}
 import java.util.concurrent.atomic.AtomicLong
+import java.util.{Timer, TimerTask}
 
-import scala.concurrent.duration._
-import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable.HashMap
-import scala.collection.mutable.HashSet
-import scala.language.postfixOps
-import scala.util.Random
-
-import org.apache.spark._
 import org.apache.spark.TaskState.TaskState
-import org.apache.spark.scheduler.SchedulingMode.SchedulingMode
-import org.apache.spark.util.Utils
+import org.apache.spark._
+import org.apache.spark.deploy.master.WorkerInfo
 import org.apache.spark.executor.TaskMetrics
+import org.apache.spark.scheduler.SchedulingMode.SchedulingMode
 import org.apache.spark.storage.BlockManagerId
+import org.apache.spark.util.Utils
+
+import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 /**
  * Schedules tasks for multiple types of clusters by acting through a SchedulerBackend.
@@ -112,6 +110,9 @@ private[spark] class TaskSchedulerImpl(
       throw new SparkException(s"Unrecognized spark.scheduler.mode: $schedulingModeConf")
   }
 
+  /* CAE */
+  var workers = new HashSet[WorkerInfo]
+  var caeAvgResourceEntropy:Double =0
   // This is a var so that we can reset it for testing purposes.
   private[spark] var taskResultGetter = new TaskResultGetter(sc.env, this)
 
@@ -209,6 +210,11 @@ private[spark] class TaskSchedulerImpl(
       .format(manager.taskSet.id, manager.parent.name))
   }
 
+  def computeHostWeight(host:String,cores:Int): Double ={
+    val worker: WorkerInfo =workers.filter(s=>s.host==host).head
+    val weight = worker.caeLiveSpeed.toDouble
+    weight}
+
   /**
    * Called by cluster manager to offer resources on slaves. We respond by asking our active task
    * sets for tasks in order of priority. We fill each node with tasks in a round-robin manner so
@@ -232,7 +238,9 @@ private[spark] class TaskSchedulerImpl(
     }
 
     // Randomly shuffle offers to avoid always placing tasks on the same set of workers.
-    val shuffledOffers = Random.shuffle(offers)
+    //val shuffledOffers = Random.shuffle(offers)
+    val shuffledOffers = offers.sortWith((w1,w2)=>computeHostWeight(w1.host,w1.cores)>computeHostWeight(w2.host,w2.cores))
+    logInfo("Number of Offer : " + shuffledOffers.size)
     // Build a list of tasks to assign to each worker.
     val tasks = shuffledOffers.map(o => new ArrayBuffer[TaskDescription](o.cores))
     val availableCpus = shuffledOffers.map(o => o.cores).toArray
@@ -255,6 +263,7 @@ private[spark] class TaskSchedulerImpl(
         for (i <- 0 until shuffledOffers.size) {
           val execId = shuffledOffers(i).executorId
           val host = shuffledOffers(i).host
+          logInfo(i+","+execId+","+host)
           if (availableCpus(i) >= CPUS_PER_TASK) {
             for (task <- taskSet.resourceOffer(execId, host, maxLocality)) {
               tasks(i) += task

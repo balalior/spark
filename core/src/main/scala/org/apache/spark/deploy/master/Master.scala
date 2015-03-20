@@ -204,7 +204,7 @@ private[spark] class Master(
         sender ! RegisterWorkerFailed("Duplicate worker ID")
       } else {
         val worker = new WorkerInfo(id, workerHost, workerPort, cores, memory,
-          sender, workerUiPort, publicAddress,caeSpeed,caeEntropy)
+          sender, workerUiPort, publicAddress,caeSpeed,caeEntropy,caeAvgResourceEntropy)
         if (registerWorker(worker)) {
           persistenceEngine.addWorker(worker)
           sender ! RegisteredWorker(masterUrl, masterWebUiUrl)
@@ -348,7 +348,12 @@ private[spark] class Master(
             workerInfo.caeLiveEntropy = caeEntropy
             caeAvgResourceEntropy = workers.map(s => s.caeLiveEntropy).toSeq.sum / workers.size.toDouble
           }
+          workerInfo.caeAvgResourceEntropy=caeAvgResourceEntropy
           logInfo("Worker '"+workerInfo.host+ "' CPU speed - "+workerInfo.caeLiveSpeed+", Worker Entropy - "+workerInfo.caeLiveEntropy + "; Average Worker Entropy :" + caeAvgResourceEntropy)
+          sender ! UpdateCaeAverageResourceEntropy(caeAvgResourceEntropy)
+          for (app<-idToApp){
+            app._2.driver ! UpdateCAEInfo(workers,caeAvgResourceEntropy)
+          }
         case None =>
           if (workers.map(_.id).contains(workerId)) {
             logWarning(s"Got heartbeat from unregistered worker $workerId." +
@@ -532,7 +537,7 @@ private[spark] class Master(
       // Try to spread out each app among all the nodes, until it has all its cores
       for (app <- waitingApps if app.coresLeft > 0) {
         val usableWorkers = workers.toArray.filter(_.state == WorkerState.ALIVE)
-          .filter(canUse(app, _)).sortBy(_.coresFree).reverse
+          .filter(canUse(app, _)).sortBy((_.coresFree)).reverse
         val numUsable = usableWorkers.length
         val assigned = new Array[Int](numUsable) // Number of cores to give on each node
         var toAssign = math.min(app.coresLeft, usableWorkers.map(_.coresFree).sum)

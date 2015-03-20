@@ -23,10 +23,13 @@ package org.apache.spark.deploy
  * failover.
  */
 private[spark] class ExecutorDescription(
-    val appId: String,
-    val execId: Int,
-    val cores: Int,
-    val state: ExecutorState.Value)
+                                          val appId: String,
+                                          val execId: Int,
+                                          val cores: Int,
+                                          val state: ExecutorState.Value,
+                                          val speed: Long,
+                                          val entropy: Double,
+                                          val avgEntropy:Double)
   extends Serializable {
 
   override def toString: String =

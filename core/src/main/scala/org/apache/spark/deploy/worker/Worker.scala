@@ -149,6 +149,7 @@ private[spark] class Worker(
   var caeSum:Float = 0
   var caeAvg:Float = 0
   var caeEntropy:Double=0
+  var caeAvgResourceEntropy:Double =0
 
   var caeCount0:Double =0d
   var caeCount1:Double =0d
@@ -329,6 +330,10 @@ private[spark] class Worker(
       //logInfo("Average CPU Change"+caeSum/caeCpuUsageChangeHistory.size.toFloat)
       // CAE End
 
+    case UpdateCaeAverageResourceEntropy(avgResourceEntropy) =>
+      caeAvgResourceEntropy=avgResourceEntropy
+      logInfo("Average Resource Entropy:" + caeAvgResourceEntropy)
+
     case SendHeartbeat =>
       if (connected) {
         caeCount0=0d
@@ -388,7 +393,7 @@ private[spark] class Worker(
       changeMaster(masterUrl, masterWebUiUrl)
 
       val execs = executors.values.
-        map(e => new ExecutorDescription(e.appId, e.execId, e.cores, e.state))
+        map(e => new ExecutorDescription(e.appId, e.execId, e.cores, e.state,0,0,0))
       sender ! WorkerSchedulerStateResponse(workerId, execs.toList, drivers.keys.toSeq)
 
     case Heartbeat =>
@@ -429,7 +434,7 @@ private[spark] class Worker(
 
           val manager = new ExecutorRunner(appId, execId, appDesc, cores_, memory_,
             self, workerId, host, sparkHome, executorDir, akkaUrl, conf, appLocalDirs,
-            ExecutorState.LOADING)
+            ExecutorState.LOADING,caeSpeedPerCore,caeEntropy,caeAvgResourceEntropy)
           executors(appId + "/" + execId) = manager
           manager.start()
           coresUsed += cores_
